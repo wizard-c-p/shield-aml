@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card p-4 mb-4 border-warning shadow-sm">
+            <h5 class="text-warning"><i class="bi bi-cone-striped"></i> Maintenance Operations</h5>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <span>
+                    If Maintenance Mode was active, transactions might be stuck in <strong>"SAVED_FOR_LATER"</strong> status.
+                    <br><small class="text-muted">Use this button to re-queue them for AI Analysis.</small>
+                </span>
+                <button onclick="replayTransactions()" class="btn btn-warning text-dark fw-bold">
+                    <i class="bi bi-play-circle-fill"></i> Replay Saved Transactions
+                </button>
+            </div>
+        </div>
+
+        <div class="card p-4 shadow-sm">
+            <h3 class="mb-4"><i class="bi bi-sliders"></i> System Configuration</h3>
+            <table class="table align-middle">
+                <thead><tr><th>Parameter Key</th><th>Current Value</th><th>Update</th></tr></thead>
+                <tbody>
+                    {% for config in configs %}
+                    <tr>
+                        <td>
+                            <span class="d-inline-block" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ config.description }}">
+                                <strong class="text-primary" style="cursor: help; text-decoration: underline dotted;">{{ config.key }}</strong>
+                                <i class="bi bi-info-circle-fill text-muted ms-1 small"></i>
+                            </span>
+                        </td>
+                        <td>
+                            <form action="/api/v1/config/update" method="post" class="d-flex">
+                                <input type="hidden" name="key" value="{{ config.key }}">
+                                <input type="text" name="value" class="form-control font-monospace" value="{{ config.value }}">
+                        </td>
+                        <td>
+                                <button type="submit" class="btn btn-outline-primary btn-sm ms-2">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) })
+
+    async function replayTransactions() {
+        if(!confirm("Are you sure you want to re-process all saved transactions?")) return;
+        const res = await fetch('/api/v1/maintenance/replay', {method:'POST'});
+        const data = await res.json();
+        alert(data.message);
+    }
+</script>
+{% endblock %}

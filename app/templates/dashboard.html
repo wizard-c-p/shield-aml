@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-5">
+        <div class="card h-100 p-4 shadow-sm">
+            <h4 class="mb-4 text-primary"><i class="bi bi-lightning-charge-fill"></i> Live Simulator</h4>
+            
+            <div class="mb-3">
+                <label class="form-label text-muted">Sender Client</label>
+                <select id="sender" class="form-select form-select-lg">
+                    {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.full_name }} ({{ user.segment }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label text-muted">Target Identity</label>
+                <input type="text" id="target" class="form-control form-control-lg" placeholder="e.g. 66666">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label text-muted">Amount</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text">₺</span>
+                    <input type="number" id="amount" class="form-control" placeholder="0.00">
+                </div>
+            </div>
+            
+            <button onclick="sendTx()" class="btn btn-primary btn-lg w-100 mt-2">
+                Analyze Transaction <i class="bi bi-arrow-right"></i>
+            </button>
+            
+            <div id="result" class="mt-4 text-center d-none p-3 rounded bg-body-tertiary border">
+                <h6 class="text-muted text-uppercase small">Result</h6>
+                <h2 id="score" class="fw-bold mb-0">--</h2>
+                <span id="status" class="badge rounded-pill fs-6 px-3 py-2 mt-2">WAITING</span>
+                <p id="rules" class="text-danger mt-2 small"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-7">
+        <div class="card p-4 shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Recent Activity</h5>
+                <div>
+                    <button onclick="refreshTable()" class="btn btn-sm btn-outline-primary me-2">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                    <a href="/history" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead><tr><th>Target</th><th>Amount</th><th>Status</th></tr></thead>
+                    <tbody id="recent-table">
+                        {% for tx in recent_txs %}
+                        <tr>
+                            <td>{{ tx.target_identity_no }}</td>
+                            <td class="font-monospace">{{ tx.amount }} ₺</td>
+                            <td>
+                                {% if tx.status == 'APPROVED' %} <span class="badge bg-success">APPROVED</span>
+                                {% elif tx.status == 'REJECTED' %} <span class="badge bg-danger">REJECTED</span>
+                                {% elif tx.status == 'SAVED_FOR_LATER' %} <span class="badge bg-info text-dark">SAVED (MAINTENANCE)</span>
+                                {% else %} <span class="badge bg-warning text-dark">{{ tx.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function sendTx() {
+    const btn = document.querySelector('button[onclick="sendTx()"]');
+    const originalText = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+    
+    const body = {
+        sender_id: document.getElementById('sender').value,
+        target_identity_no: document.getElementById('target').value,
+        amount: document.getElementById('amount').value
+    };
+    
+    try {
+        const res = await fetch('/api/v1/transfer', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        
+        // Handle Maintenance Mode Response Immediately
+        if (data.status === 'SAVED') {
+            document.getElementById('result').classList.remove('d-none');
+            document.getElementById('score').innerText = "N/A";
+            document.getElementById('status').innerText = "SAVED FOR LATER";
+            document.getElementById('status').className = "badge rounded-pill fs-6 px-3 py-2 mt-2 bg-info text-dark";
+            document.getElementById('rules').innerText = data.message;
+            btn.disabled = false; btn.innerHTML = originalText;
+            refreshTable();
+            return;
+        }
+
+        // Normal Polling
+        const interval = setInterval(async () => {
+            const sRes = await fetch('/api/v1/status/' + data.tx_id);
+            const sData = await sRes.json();
+            
+            if(sData.status !== 'PENDING') {
+                clearInterval(interval);
+                document.getElementById('result').classList.remove('d-none');
+                document.getElementById('score').innerText = sData.risk_score + "/100";
+                document.getElementById('rules').innerText = sData.triggered_rules;
+                
+                const badge = document.getElementById('status');
+                badge.innerText = sData.status;
+                badge.className = 'badge rounded-pill fs-6 px-3 py-2 mt-2 ' + 
+                    (sData.status === 'APPROVED' ? 'bg-success' : sData.status === 'REJECTED' ? 'bg-danger' : 'bg-warning text-dark');
+                
+                btn.disabled = false; btn.innerHTML = originalText;
+                refreshTable();
+            }
+        }, 1000);
+    } catch(e) {
+        alert("Error connecting to server");
+        btn.disabled = false; btn.innerHTML = originalText;
+    }
+}
+
+async function refreshTable() {
+    const res = await fetch('/api/v1/transactions/recent');
+    const data = await res.json();
+    const tbody = document.getElementById('recent-table');
+    tbody.innerHTML = data.map(tx => {
+        let badgeClass = 'bg-warning text-dark';
+        if(tx.status === 'APPROVED') badgeClass = 'bg-success';
+        if(tx.status === 'REJECTED') badgeClass = 'bg-danger';
+        if(tx.status === 'SAVED_FOR_LATER') badgeClass = 'bg-info text-dark';
+        
+        return `<tr>
+            <td>${tx.target_identity_no}</td>
+            <td class="font-monospace">${tx.amount} ₺</td>
+            <td><span class="badge ${badgeClass}">${tx.status}</span></td>
+        </tr>`;
+    }).join('');
+}
+</script>
+{% endblock %}

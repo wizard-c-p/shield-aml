@@ -1,0 +1,60 @@
+{
+	"info": {
+		"name": "ShieldAML v7 Modular",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Clean Transaction",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"sender_id\": 1, \"target_identity_no\": \"99999\", \"amount\": 2500.0}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://127.0.0.1:8000/api/v1/transfer" }
+			}
+		},
+		{
+			"name": "2. Blacklist Hit",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"sender_id\": 1, \"target_identity_no\": \"66666\", \"amount\": 100.0}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://127.0.0.1:8000/api/v1/transfer" }
+			}
+		},
+		{
+			"name": "3. Watchlist Hit",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"sender_id\": 1, \"target_identity_no\": \"77777\", \"amount\": 5000.0}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://127.0.0.1:8000/api/v1/transfer" }
+			}
+		},
+		{
+			"name": "4. AI Anomaly",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"sender_id\": 2, \"target_identity_no\": \"123123\", \"amount\": 9000000.0}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://127.0.0.1:8000/api/v1/transfer" }
+			}
+		}
+	]
+}

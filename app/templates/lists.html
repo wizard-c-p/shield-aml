@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-danger mb-4">
+            <div class="card-header bg-danger text-white">Blacklist</div>
+            <div class="card-body">
+                <div class="input-group mb-3">
+                    <input type="text" id="bl-id" class="form-control" placeholder="ID">
+                    <input type="text" id="bl-reason" class="form-control" placeholder="Reason">
+                    <button onclick="upsertList('blacklist')" class="btn btn-outline-danger" id="btn-bl">Add/Update</button>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for item in blacklist %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span><strong>{{ item.identity_no }}</strong> <small>({{ item.reason }})</small></span>
+                        <div>
+                            <button onclick="editItem('bl', '{{ item.identity_no }}', '{{ item.reason }}')" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></button>
+                            <button onclick="delList('blacklist', '{{ item.identity_no }}')" class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">Watchlist</div>
+            <div class="card-body">
+                <div class="input-group mb-3">
+                    <input type="text" id="wl-id" class="form-control" placeholder="ID">
+                    <select id="wl-level" class="form-select"><option value="HIGH">HIGH</option><option value="MEDIUM">MEDIUM</option></select>
+                    <button onclick="upsertList('watchlist')" class="btn btn-outline-warning text-dark" id="btn-wl">Add/Update</button>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for item in watchlist %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span><strong>{{ item.identity_no }}</strong> <span class="badge bg-secondary">{{ item.risk_level }}</span></span>
+                        <div>
+                            <button onclick="editItem('wl', '{{ item.identity_no }}', '{{ item.risk_level }}')" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></button>
+                            <button onclick="delList('watchlist', '{{ item.identity_no }}')" class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function editItem(prefix, id, val) {
+    document.getElementById(prefix + '-id').value = id;
+    if(prefix === 'wl') document.getElementById(prefix + '-level').value = val;
+    else document.getElementById(prefix + '-reason').value = val;
+}
+async function upsertList(type) {
+    const id = document.getElementById(type === 'blacklist' ? 'bl-id' : 'wl-id').value;
+    const val = document.getElementById(type === 'blacklist' ? 'bl-reason' : 'wl-level').value;
+    await fetch(`/api/v1/${type}`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({identity_no: id, reason_or_level: val})});
+    location.reload();
+}
+async function delList(type, id) {
+    if(confirm('Delete ' + id + '?')) {
+        await fetch(`/api/v1/${type}/${id}`, { method: 'DELETE' });
+        location.reload();
+    }
+}
+</script>
+{% endblock %}
