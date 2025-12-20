@@ -62,5 +62,5 @@ You can run this project locally in minutes.
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/yourusername/shield-aml.git](https://github.com/yourusername/shield-aml.git)
+git clone [https://github.com/yourusername/shield-aml.git](https://github.com/wizard-c-p/shield-aml.git)
 cd shield-aml
